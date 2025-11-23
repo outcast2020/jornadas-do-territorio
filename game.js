@@ -68,7 +68,7 @@ function renderScreen(id) {
       <section class="center">
         <h1>Jornadas do Território</h1>
         <p>Um jogo de escrita viva, memória e território.</p>
-        <p>Aqui, quem escreve é você. A IA entra depois — só para lapidar.</p>
+        <p>Aqui, quem escreve é você. A IA entra só depois — sua história é essencial.</p>
         <button id="btn-start">Começar jornada</button>
       </section>
     `;
@@ -420,3 +420,4 @@ window.onload = () => {
   updateHUD();
   renderScreen('splash');
 };
+
