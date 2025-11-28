@@ -558,35 +558,149 @@ function handleTileEvent(tileType) {
 }
 
 // Função de Email
+// Coleta todos os dados do jogo para exportação
+function getGameData() {
+  const now = new Date();
+  return {
+    timestamp: now.toLocaleString('pt-BR'),
+    nickname: gameState.profile ? gameState.profile.nome : 'Viajante',
+    place: gameState.profile ? gameState.profile.territorio : 'Desconhecido',
+    points_vivencia: gameState.points.vivencia,
+    points_imaginacao: gameState.points.imaginacao,
+    points_territorio: gameState.points.territorio,
+    text_m1: gameState.m1_text || '',
+    text_m2_poem: gameState.m2_image_poem || '',
+    text_m2_verse: gameState.m2_user_verse || '',
+    text_m3: gameState.m3_new_verse || '',
+    text_lit_fugaz: gameState.lit_fugaz_text || '',
+    text_tematica_theme: gameState.tematica_chosen || '',
+    text_tematica: gameState.tematica_text || ''
+  };
+}
+
+// Gera e baixa um arquivo CSV (Excel)
+function saveToCSV(data) {
+  // Cabeçalho para o Excel reconhecer acentos (BOM)
+  const BOM = "\uFEFF";
+  const headers = [
+    "Data", "Nome", "Territorio",
+    "Pts_Vivencia", "Pts_Imaginacao", "Pts_Territorio",
+    "M1_Vivencia", "M2_ImagemPoema", "M2_Verso", "M3_Inscricao",
+    "Lit_Fugaz", "Tema_Escolhido", "Texto_Tematico"
+  ];
+
+  const row = [
+    data.timestamp, data.nickname, data.place,
+    data.points_vivencia, data.points_imaginacao, data.points_territorio,
+    data.text_m1, data.text_m2_poem, data.text_m2_verse, data.text_m3,
+    data.text_lit_fugaz, data.text_tematica_theme, data.text_tematica
+  ];
+
+  // Escapar aspas e quebras de linha para CSV
+  const csvRow = row.map(field => {
+    const stringField = String(field);
+    if (stringField.includes('"') || stringField.includes(',') || stringField.includes('\n')) {
+      return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+  }).join(",");
+
+  const csvContent = BOM + headers.join(",") + "\n" + csvRow;
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `jornada_${data.nickname.replace(/\s+/g, '_')}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Função de Email e Registro
 function sendEmail() {
-  const subject = encodeURIComponent("Minha Jornada do Território");
+  const data = getGameData();
+
+  // 1. Gera o arquivo Excel (CSV) para o usuário
+  saveToCSV(data);
+
+  // 2. Prepara o corpo do email
+  const subject = encodeURIComponent(`Registro de Jornada: ${data.nickname}`);
   const body = encodeURIComponent(`
-Nome: ${gameState.profile ? gameState.profile.nome : 'Viajante'}
-Território: ${gameState.profile ? gameState.profile.territorio : 'Desconhecido'}
+Olá! 
 
---- Missão 1: Vivência ---
-${gameState.m1_text}
+Estou enviando o registro da minha Jornada do Território.
+Em anexo (se baixado) segue a planilha com os dados.
 
---- Missão 2: Imagem-Poema ---
-${gameState.m2_image_poem}
-Verso: ${gameState.m2_user_verse}
+--- DADOS GERAIS ---
+Data: ${data.timestamp}
+Nome: ${data.nickname}
+Lugar: ${data.place}
 
---- Missão 3: Inscrição Territorial ---
-${gameState.m3_new_verse}
+--- PONTUAÇÃO ---
+Vivência: ${data.points_vivencia}
+Imaginação: ${data.points_imaginacao}
+Território: ${data.points_territorio}
 
---- Encontro Fugaz ---
-${gameState.lit_fugaz_text}
+--- PRODUÇÕES TEXTUAIS ---
 
---- Desafio da Biblioteca Temática ---
-Tema: ${gameState.tematica_chosen}
-Texto: ${gameState.tematica_text}
+1. Vivência:
+"${data.text_m1}"
 
-Pontuação Final:
-Vivência: ${gameState.points.vivencia}
-Imaginação: ${gameState.points.imaginacao}
-Território: ${gameState.points.territorio}
-    `);
+2. Imagem-Poema:
+"${data.text_m2_poem}"
+Verso: "${data.text_m2_verse}"
+
+3. Inscrição Territorial:
+"${data.text_m3}"
+
+4. Encontro Fugaz:
+"${data.text_lit_fugaz}"
+
+5. Desafio Temático (${data.text_tematica_theme}):
+"${data.text_tematica}"
+
+-----------------------------------
+Jogo: Jornadas do Território
+`);
+
+  // 3. Abre o cliente de email
   window.open(`mailto:?subject=${subject}&body=${body}`);
+
+  // Feedback visual
+  showDialog('Seu registro foi baixado (CSV) e o email foi aberto! Envie o email para o administrador.');
+
+  // NOTA PARA O DESENVOLVEDOR (ADMIN):
+  // Siga as instruções em GOOGLE_SHEETS_SETUP.md para configurar a planilha.
+  // Depois de configurar, cole a URL do Web App abaixo.
+  sendToGoogleSheets(data);
+}
+
+// Função para envio automático para o Google Sheets
+function sendToGoogleSheets(data) {
+  // COLOQUE SUA URL DO GOOGLE APPS SCRIPT AQUI:
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw3EG5Fd0npGniyfsCgaMIGea7NuB0TLeEKSs8KF9ioEb28pAbJwED5_9GH4t6B8HwS/exec';
+
+  if (SCRIPT_URL === 'COLE_SUA_URL_DO_WEB_APP_AQUI') {
+    console.log('URL do Google Sheets não configurada. Veja GOOGLE_SHEETS_SETUP.md');
+    return;
+  }
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors', // 'no-cors' é necessário para enviar dados para o Google Scripts sem erro de CORS
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+    .then(() => {
+      console.log('Dados enviados para a planilha!');
+      showDialog('Dados sincronizados com a nuvem com sucesso!');
+    })
+    .catch(err => {
+      console.error('Erro ao enviar para planilha:', err);
+      showDialog('Erro ao sincronizar com a nuvem. Verifique o console.');
+    });
 }
 
 // Controles pelo teclado
