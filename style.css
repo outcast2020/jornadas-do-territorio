@@ -213,78 +213,29 @@ button:active {
   pointer-events: none;
 }
 
-/* CSS Pixel Art NPCs - Diverse Brazilian Phenotypes */
+/* NPC Avatars (Emojis) */
 .npc-base {
   position: absolute;
-  width: 4px;
-  height: 4px;
+  width: 32px;
+  height: 32px;
   z-index: 15;
-  box-shadow:
-    /* Body shape generic */
-    4px 4px 0 0 transparent;
-  transform: scale(4);
-  /* Scale up 4x4 pixels to 32x32 size roughly */
-  transform-origin: top left;
+  font-size: 24px;
+  text-align: center;
+  line-height: 32px;
+  transform: none;
+  box-shadow: none;
   animation: bob 1s infinite alternate;
-}
-
-/* Dona Cida (Black Matriarch) - Vivência */
-.npc-vivencia {
-  /* Simple representation: White hair, Dark skin, Orange dress */
+  cursor: pointer;
+  /* Ensure no background color makes it look like a square */
   background: transparent;
-  box-shadow:
-    4px 0 #eee, 8px 0 #eee,
-    /* Hair */
-    4px 4px #5d4037, 8px 4px #5d4037,
-    /* Face */
-    4px 8px #ff5722, 8px 8px #ff5722,
-    /* Body */
-    4px 12px #ff5722, 8px 12px #ff5722;
-  /* Legs/Dress */
-  color: #5d4037;
-  /* Skin tone reference */
 }
 
-/* Cauã (Indigenous Youth) - Imaginação */
-.npc-imaginacao {
-  /* Dark straight hair, Tan skin, Green shirt */
-  box-shadow:
-    4px 0 #212121, 8px 0 #212121,
-    /* Hair */
-    4px 4px #d7ccc8, 8px 4px #d7ccc8,
-    /* Face */
-    4px 8px #4caf50, 8px 8px #4caf50,
-    /* Body */
-    4px 12px #3e2723, 8px 12px #3e2723;
-  /* Legs */
-}
-
-/* Zé do Boné (Afro-Brazilian Youth) - Território */
-.npc-territorio {
-  /* Blue cap, Dark skin, White shirt */
-  box-shadow:
-    4px 0 #1976d2, 8px 0 #1976d2,
-    /* Cap */
-    4px 4px #3e2723, 8px 4px #3e2723,
-    /* Face */
-    4px 8px #fff, 8px 8px #fff,
-    /* Body */
-    4px 12px #0d47a1, 8px 12px #0d47a1;
-  /* Legs */
-}
-
-/* O Viajante (Mysterious) - Fugaz */
+/* Specific tweaks if needed, currently handled by Emojis in JS */
+.npc-vivencia,
+.npc-imaginacao,
+.npc-territorio,
 .npc-fugaz {
-  /* Hooded, Shadowy */
-  box-shadow:
-    4px 0 #424242, 8px 0 #424242,
-    /* Hood */
-    4px 4px #000, 8px 4px #000,
-    /* Face (Hidden) */
-    4px 8px #616161, 8px 8px #616161,
-    /* Body */
-    4px 12px #212121, 8px 12px #212121;
-  /* Legs */
+  box-shadow: none;
 }
 
 @keyframes bob {
