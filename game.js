@@ -12,6 +12,7 @@ const gameState = {
   milestone100: false,
   wordChallengeCompleted: false,
   currentWordChallenge: null,
+  controlsBlocked: false, // Flag to block player movement
 
   // posição do avatar no mapa (coordenadas de grid)
   playerPosition: { x: 10, y: 10 }, // Start position adjusted for larger map
@@ -86,7 +87,8 @@ function updateHUD() {
   const totalPoints = gameState.points.vivencia + gameState.points.imaginacao + gameState.points.territorio;
   if (totalPoints >= 100 && !gameState.milestone100) {
     gameState.milestone100 = true;
-    setTimeout(() => showTransitionToWordChallenge(), 500);
+    // Immediately and unavoidably trigger transition - no delay
+    showTransitionToWordChallenge();
   }
 }
 
@@ -115,12 +117,39 @@ function showDialog(text, onDismiss) {
   };
 }
 
+// Helper function to navigate safely (respects milestone transition)
+function safeNavigateToMap() {
+  // If the milestone transition is already triggered or controls are blocked,
+  // do NOT return to map - the transition will handle navigation
+  if (gameState.milestone100 || gameState.controlsBlocked) {
+    return; // Block navigation
+  }
+  renderScreen('world_map');
+}
+
 // ========== 100 POINTS MILESTONE TRANSITION ========== //
 
 function showTransitionToWordChallenge() {
-  const app = document.getElementById('app');
-  app.innerHTML = `
-    <section class="center transition-scene">
+  // Block all game controls immediately
+  gameState.controlsBlocked = true;
+
+  // Create a full-screen overlay that takes over everything
+  const overlay = document.createElement('div');
+  overlay.id = 'milestone-overlay';
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100vw';
+  overlay.style.height = '100vh';
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
+  overlay.style.zIndex = '9999';
+  overlay.style.display = 'flex';
+  overlay.style.justifyContent = 'center';
+  overlay.style.alignItems = 'center';
+  overlay.style.animation = 'fadeIn 0.5s ease-in';
+
+  overlay.innerHTML = `
+    <div class="center transition-scene" style="background: var(--bg-color); padding: 40px; border: 4px solid var(--border-color); max-width: 600px; box-shadow: 0 0 50px rgba(255, 222, 0, 0.5);">
       <div id="transition-content">
         <h1>🎉 CONQUISTA DESBLOQUEADA! 🎉</h1>
         <p>Você alcançou 100 pontos!</p>
@@ -129,25 +158,37 @@ function showTransitionToWordChallenge() {
         </div>
         <p id="transform-text"></p>
       </div>
-    </section>
+    </div>
   `;
+
+  // Append overlay to body (not app) so it's truly unavoidable
+  document.body.appendChild(overlay);
 
   // Animate transformation
   setTimeout(() => {
-    document.getElementById('transform-text').textContent = 'O escritor ganha um lápis mágico...';
+    const textEl = document.getElementById('transform-text');
+    if (textEl) textEl.textContent = 'O escritor ganha um lápis mágico...';
   }, 1000);
 
   setTimeout(() => {
     const playerEl = document.querySelector('.player-small');
-    playerEl.classList.add('growing');
-    playerEl.textContent = '✍️✏️';
+    if (playerEl) {
+      playerEl.classList.add('growing');
+      playerEl.textContent = '✍️✏️';
+    }
   }, 2500);
 
   setTimeout(() => {
-    document.getElementById('transform-text').textContent = '...e cresce com o poder da escrita!';
+    const textEl = document.getElementById('transform-text');
+    if (textEl) textEl.textContent = '...e cresce com o poder da escrita!';
   }, 3000);
 
   setTimeout(() => {
+    // Remove overlay before transitioning
+    const milestoneOverlay = document.getElementById('milestone-overlay');
+    if (milestoneOverlay) {
+      milestoneOverlay.remove();
+    }
     fadeToWordChallenge();
   }, 5000);
 }
@@ -481,9 +522,9 @@ function renderScreen(id) {
       gameState.m1_text = txt;
       gameState.points.vivencia += 20;
       updateHUD();
-      showDialog('Vivência registrada! Você ganhou +20 Pontos de Vivência.', () => renderScreen('world_map'));
+      showDialog('Vivência registrada! Você ganhou +20 Pontos de Vivência.', () => safeNavigateToMap());
     };
-    document.getElementById('btn-m1-back').onclick = () => renderScreen('world_map');
+    document.getElementById('btn-m1-back').onclick = () => safeNavigateToMap();
     return;
   }
 
@@ -544,11 +585,11 @@ function renderScreen(id) {
         gameState.missions.world1_m2 = true;
         gameState.points.imaginacao += 15;
         updateHUD();
-        showDialog('Missão 2 concluída! Você ganhou +15 Pontos de Imaginação.', () => renderScreen('world_map'));
+        showDialog('Missão 2 concluída! Você ganhou +15 Pontos de Imaginação.', () => safeNavigateToMap());
       };
     };
 
-    document.getElementById('btn-m2-back').onclick = () => renderScreen('world_map');
+    document.getElementById('btn-m2-back').onclick = () => safeNavigateToMap();
     return;
   }
 
@@ -575,9 +616,9 @@ function renderScreen(id) {
       gameState.missions.world1_m3 = true;
       gameState.points.territorio += 30;
       updateHUD();
-      showDialog('Missão 3 concluída! Você ganhou +30 Pontos de Território.', () => renderScreen('world_map'));
+      showDialog('Missão 3 concluída! Você ganhou +30 Pontos de Território.', () => safeNavigateToMap());
     };
-    document.getElementById('btn-m3-back').onclick = () => renderScreen('world_map');
+    document.getElementById('btn-m3-back').onclick = () => safeNavigateToMap();
     return;
   }
 
@@ -606,10 +647,10 @@ function renderScreen(id) {
       gameState.points.imaginacao += 20;
       gameState.points.territorio += 10;
       updateHUD();
-      showDialog('Missão literária concluída! Você ganhou +20 Imaginação e +10 Território.', () => renderScreen('world_map'));
+      showDialog('Missão literária concluída! Você ganhou +20 Imaginação e +10 Território.', () => safeNavigateToMap());
     };
 
-    document.getElementById('btn-lit-back').onclick = () => renderScreen('world_map');
+    document.getElementById('btn-lit-back').onclick = () => safeNavigateToMap();
     return;
   }
 
@@ -665,10 +706,10 @@ function renderScreen(id) {
       gameState.points.imaginacao += 25;
       gameState.points.vivencia += 10;
       updateHUD();
-      showDialog(`Desafio de ${theme} concluído! +25 Imaginação, +10 Vivência.`, () => renderScreen('world_map'));
+      showDialog(`Desafio de ${theme} concluído! +25 Imaginação, +10 Vivência.`, () => safeNavigateToMap());
     };
 
-    document.getElementById('btn-tematica-back').onclick = () => renderScreen('world_map');
+    document.getElementById('btn-tematica-back').onclick = () => safeNavigateToMap();
     return;
   }
 }
@@ -745,7 +786,7 @@ function showLibrary() {
     </section>
   `;
 
-  document.getElementById('btn-lib-back').onclick = () => renderScreen('world_map');
+  document.getElementById('btn-lib-back').onclick = () => safeNavigateToMap();
 }
 
 function drawMap() {
@@ -811,6 +852,9 @@ function updatePlayerPosition() {
 
 // Movimento
 function step(dx, dy) {
+  // Block movement if controls are blocked (during transition)
+  if (gameState.controlsBlocked) return;
+
   const newX = gameState.playerPosition.x + dx;
   const newY = gameState.playerPosition.y + dy;
 
