@@ -401,7 +401,7 @@ function renderMapScreen() {
       
       <div style="text-align:center; margin-top:20px; display:flex; flex-direction:column; gap:8px;">
         <button id="btn-library" style="background:#81d4fa; color:#000;">📖 Ler Cordéis Encontrados</button>
-        <button id="btn-send-email" style="background:#ffeb3b; color:#000;">📩 Enviar Jornada por Email</button>
+        <button id="btn-send-email" style="background:#ffeb3b; color:#000;">💾 Baixar Jornada (.doc)</button>
       </div>
     </section>
   `;
@@ -482,6 +482,13 @@ function drawMap() {
     npcEl.classList.add('npc-base', npc.type); // Use base class + specific type
     npcEl.style.left = (npc.x * 32) + 'px';
     npcEl.style.top = (npc.y * 32) + 'px';
+
+    // Assign Emojis for Human Representation
+    if (npc.type === 'npc-vivencia') npcEl.textContent = '👵🏾';
+    if (npc.type === 'npc-imaginacao') npcEl.textContent = '🧑🏽';
+    if (npc.type === 'npc-territorio') npcEl.textContent = '👦🏿';
+    if (npc.type === 'npc-fugaz') npcEl.textContent = '👤';
+
     mapEl.appendChild(npcEl);
   });
 
@@ -578,103 +585,77 @@ function getGameData() {
   };
 }
 
-// Gera e baixa um arquivo CSV (Excel)
-function saveToCSV(data) {
-  // Cabeçalho para o Excel reconhecer acentos (BOM)
-  const BOM = "\uFEFF";
-  const headers = [
-    "Data", "Nome", "Territorio",
-    "Pts_Vivencia", "Pts_Imaginacao", "Pts_Territorio",
-    "M1_Vivencia", "M2_ImagemPoema", "M2_Verso", "M3_Inscricao",
-    "Lit_Fugaz", "Tema_Escolhido", "Texto_Tematico"
-  ];
+// Gera e baixa um arquivo DOC (compatível com Word)
+function saveToDoc(data) {
+  const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+    "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+    "xmlns='http://www.w3.org/TR/REC-html40'> " +
+    "<head><meta charset='utf-8'><title>Jornada do Território</title></head><body>";
+  const footer = "</body></html>";
 
-  const row = [
-    data.timestamp, data.nickname, data.place,
-    data.points_vivencia, data.points_imaginacao, data.points_territorio,
-    data.text_m1, data.text_m2_poem, data.text_m2_verse, data.text_m3,
-    data.text_lit_fugaz, data.text_tematica_theme, data.text_tematica
-  ];
+  // Cordel 2.0 logo as base64 (you can replace this with the actual logo)
+  const cordelLogo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAACXBIWXMAAAsTAAALEwEAmpwYAAAGF0lEQVR4nO2dT2wbRRTGv7U3TuI/TdM0adI2SUvbNKSlQIFSQUGIIiQOSBw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAgQMHDhw4cODAg';
 
-  // Escapar aspas e quebras de linha para CSV
-  const csvRow = row.map(field => {
-    const stringField = String(field);
-    if (stringField.includes('"') || stringField.includes(',') || stringField.includes('\n')) {
-      return `"${stringField.replace(/"/g, '""')}"`;
-    }
-    return stringField;
-  }).join(",");
+  const content = `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="cordel-logo.png" alt="Cordel 2.0" style="width: 80px; height: 80px;" />
+      </div>
+      <h1 style="text-align: center;">Registro de Jornada: ${data.nickname}</h1>
+      <p><strong>Data:</strong> ${data.timestamp}</p>
+      <p><strong>Lugar:</strong> ${data.place}</p>
+      <hr>
+      <h2>Pontuação</h2>
+      <ul>
+          <li>Vivência: ${data.points_vivencia}</li>
+          <li>Imaginação: ${data.points_imaginacao}</li>
+          <li>Território: ${data.points_territorio}</li>
+      </ul>
+      <hr>
+      <h2>Produções Textuais</h2>
+      <h3>1. Vivência</h3>
+      <p>${data.text_m1}</p>
+      
+      <h3>2. Imagem-Poema</h3>
+      <p><strong>Imagem:</strong> ${data.text_m2_poem}</p>
+      <p><strong>Verso:</strong> ${data.text_m2_verse}</p>
+      
+      <h3>3. Inscrição Territorial</h3>
+      <p>${data.text_m3}</p>
+      
+      <h3>4. Encontro Fugaz</h3>
+      <p>${data.text_lit_fugaz}</p>
+      
+      <h3>5. Desafio Temático (${data.text_tematica_theme})</h3>
+      <p>${data.text_tematica}</p>
+  `;
 
-  const csvContent = BOM + headers.join(",") + "\n" + csvRow;
+  const sourceHTML = header + content + footer;
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\ufeff', sourceHTML], {
+    type: 'application/msword'
+  });
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `jornada_${data.nickname.replace(/\s+/g, '_')}.csv`);
-  link.style.visibility = 'hidden';
+  link.href = url;
+  link.download = `jornada_${data.nickname.replace(/\s+/g, '_')}.doc`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-// Função de Email e Registro
+// Função de Registro e Download
 function sendEmail() {
   const data = getGameData();
 
-  // 1. Gera o arquivo Excel (CSV) para o usuário
-  saveToCSV(data);
+  // 1. Baixa o arquivo DOC para o usuário
+  saveToDoc(data);
 
-  // 2. Prepara o corpo do email
-  const subject = encodeURIComponent(`Registro de Jornada: ${data.nickname}`);
-  const body = encodeURIComponent(`
-Olá! 
-
-Estou enviando o registro da minha Jornada do Território.
-Em anexo (se baixado) segue a planilha com os dados.
-
---- DADOS GERAIS ---
-Data: ${data.timestamp}
-Nome: ${data.nickname}
-Lugar: ${data.place}
-
---- PONTUAÇÃO ---
-Vivência: ${data.points_vivencia}
-Imaginação: ${data.points_imaginacao}
-Território: ${data.points_territorio}
-
---- PRODUÇÕES TEXTUAIS ---
-
-1. Vivência:
-"${data.text_m1}"
-
-2. Imagem-Poema:
-"${data.text_m2_poem}"
-Verso: "${data.text_m2_verse}"
-
-3. Inscrição Territorial:
-"${data.text_m3}"
-
-4. Encontro Fugaz:
-"${data.text_lit_fugaz}"
-
-5. Desafio Temático (${data.text_tematica_theme}):
-"${data.text_tematica}"
-
------------------------------------
-Jogo: Jornadas do Território
-`);
-
-  // 3. Abre o cliente de email
-  window.open(`mailto:?subject=${subject}&body=${body}`);
+  // 2. Envia para o Google Sheets (mantendo o registro)
+  sendToGoogleSheets(data);
 
   // Feedback visual
-  showDialog('Seu registro foi baixado (CSV) e o email foi aberto! Envie o email para o administrador.');
-
-  // NOTA PARA O DESENVOLVEDOR (ADMIN):
-  // Siga as instruções em GOOGLE_SHEETS_SETUP.md para configurar a planilha.
-  // Depois de configurar, cole a URL do Web App abaixo.
-  sendToGoogleSheets(data);
+  showDialog('Seu registro foi baixado (.doc) e os dados enviados para a nuvem!');
 }
 
 // Função para envio automático para o Google Sheets
