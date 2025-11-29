@@ -9,6 +9,9 @@ const gameState = {
     lit_fugaz: false,
     tematica: false
   },
+  milestone100: false,
+  wordChallengeCompleted: false,
+  currentWordChallenge: null,
 
   // posição do avatar no mapa (coordenadas de grid)
   playerPosition: { x: 10, y: 10 }, // Start position adjusted for larger map
@@ -78,6 +81,13 @@ function updateHUD() {
   v.textContent = gameState.points.vivencia;
   i.textContent = gameState.points.imaginacao;
   t.textContent = gameState.points.territorio;
+
+  // Check for 100 points milestone
+  const totalPoints = gameState.points.vivencia + gameState.points.imaginacao + gameState.points.territorio;
+  if (totalPoints >= 100 && !gameState.milestone100) {
+    gameState.milestone100 = true;
+    setTimeout(() => showTransitionToWordChallenge(), 500);
+  }
 }
 
 // ========== SISTEMA DE DIÁLOGO ========== //
@@ -103,6 +113,298 @@ function showDialog(text, onDismiss) {
     newOverlay.style.display = 'none';
     if (onDismiss) onDismiss();
   };
+}
+
+// ========== 100 POINTS MILESTONE TRANSITION ========== //
+
+function showTransitionToWordChallenge() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <section class="center transition-scene">
+      <div id="transition-content">
+        <h1>🎉 CONQUISTA DESBLOQUEADA! 🎉</h1>
+        <p>Você alcançou 100 pontos!</p>
+        <div id="player-transform" class="player-transform">
+          <div class="player-small">✍️</div>
+        </div>
+        <p id="transform-text"></p>
+      </div>
+    </section>
+  `;
+
+  // Animate transformation
+  setTimeout(() => {
+    document.getElementById('transform-text').textContent = 'O escritor ganha um lápis mágico...';
+  }, 1000);
+
+  setTimeout(() => {
+    const playerEl = document.querySelector('.player-small');
+    playerEl.classList.add('growing');
+    playerEl.textContent = '✍️✏️';
+  }, 2500);
+
+  setTimeout(() => {
+    document.getElementById('transform-text').textContent = '...e cresce com o poder da escrita!';
+  }, 3000);
+
+  setTimeout(() => {
+    fadeToWordChallenge();
+  }, 5000);
+}
+
+function fadeToWordChallenge() {
+  const app = document.getElementById('app');
+  app.classList.add('fade-out');
+
+  setTimeout(() => {
+    app.classList.remove('fade-out');
+    renderWordChallenge();
+  }, 1000);
+}
+
+// ========== WORD CHALLENGE GAME ========== //
+
+const challengeWords = [
+  'Poesia', 'Vivências', 'Criatividade', 'prosa',
+  'cordel', 'Sentimentos', 'território', 'voz', 'escrita'
+];
+
+function renderWordChallenge() {
+  // Select a random word if not already set
+  if (!gameState.currentWordChallenge) {
+    const randomIndex = Math.floor(Math.random() * challengeWords.length);
+    gameState.currentWordChallenge = challengeWords[randomIndex];
+  }
+
+  const word = gameState.currentWordChallenge;
+  const scrambled = scrambleWord(word);
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <section class="form word-challenge">
+      <h2>🧩 Desafio das Palavras Ocultas</h2>
+      <p>Organize as letras para formar a palavra correta!</p>
+      <p class="hint">Dica: Relacionado à literatura e território</p>
+      
+      <div class="timer" id="timer">
+        <span>⏱️ Tempo: </span>
+        <span id="time-remaining">60</span>
+        <span> segundos</span>
+      </div>
+      
+      <div class="scrambled-word">${scrambled.split('').join(' ')}</div>
+      
+      <label>Digite a palavra:
+        <input id="word-input" type="text" placeholder="Digite aqui..." autocomplete="off" />
+      </label>
+      
+      <button id="btn-submit-word">Enviar Resposta</button>
+      <div id="word-feedback"></div>
+    </section>
+  `;
+
+  // Start countdown
+  let timeLeft = 60;
+  const timerInterval = setInterval(() => {
+    timeLeft--;
+    const timeEl = document.getElementById('time-remaining');
+    if (timeEl) {
+      timeEl.textContent = timeLeft;
+      if (timeLeft <= 10) {
+        timeEl.style.color = 'red';
+        timeEl.style.fontWeight = 'bold';
+      }
+    }
+
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      handleWordTimeout();
+    }
+  }, 1000);
+
+  // Submit button handler
+  document.getElementById('btn-submit-word').onclick = () => {
+    clearInterval(timerInterval);
+    checkWordAnswer();
+  };
+
+  // Allow Enter key to submit
+  document.getElementById('word-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      clearInterval(timerInterval);
+      checkWordAnswer();
+    }
+  });
+
+  // Store timer interval in case we need to clear it
+  gameState.wordTimerInterval = timerInterval;
+}
+
+function scrambleWord(word) {
+  const arr = word.split('');
+  // Fisher-Yates shuffle
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.join('');
+}
+
+function checkWordAnswer() {
+  const input = document.getElementById('word-input').value.trim();
+  const correct = gameState.currentWordChallenge;
+
+  if (input.toLowerCase() === correct.toLowerCase()) {
+    // Success!
+    gameState.wordChallengeCompleted = true;
+    gameState.currentWordChallenge = null;
+    showDialog('🎊 Parabéns! Você acertou a palavra!', () => {
+      transitionToCityMaze();
+    });
+  } else {
+    // Wrong answer
+    showDialog('❌ Ops! Palavra incorreta. Tente novamente com outra palavra.', () => {
+      gameState.currentWordChallenge = null; // Reset to get a new word
+      renderWordChallenge();
+    });
+  }
+}
+
+function handleWordTimeout() {
+  showDialog('⏰ Tempo esgotado! Vamos tentar com outra palavra.', () => {
+    gameState.currentWordChallenge = null; // Reset to get a new word
+    renderWordChallenge();
+  });
+}
+
+// ========== CITY MAZE LEVEL ========== //
+
+function transitionToCityMaze() {
+  const app = document.getElementById('app');
+  app.classList.add('fade-out');
+
+  setTimeout(() => {
+    app.classList.remove('fade-out');
+    renderCityMaze();
+  }, 1000);
+}
+
+function renderCityMaze() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <section class="city-maze">
+      <h2>🏙️ Labirinto da Cidade</h2>
+      <p>Você entrou em um novo território urbano!</p>
+      <p class="hint">Explore as ruas da cidade. Novos desafios virão em breve...</p>
+      
+      <div class="maze-container">
+        <div class="maze-grid" id="city-maze-grid"></div>
+      </div>
+      
+      <div class="controls">
+        <button id="btn-maze-up">↑</button>
+        <div style="display:flex; gap:4px;">
+          <button id="btn-maze-left">←</button>
+          <button id="btn-maze-down">↓</button>
+          <button id="btn-maze-right">→</button>
+        </div>
+      </div>
+      
+      <div style="text-align:center; margin-top:20px;">
+        <button id="btn-back-to-map">Voltar ao Território Original</button>
+      </div>
+    </section>
+  `;
+
+  drawCityMaze();
+
+  // Movement controls
+  document.getElementById('btn-maze-up').onclick = () => moveMaze(0, -1);
+  document.getElementById('btn-maze-down').onclick = () => moveMaze(0, 1);
+  document.getElementById('btn-maze-left').onclick = () => moveMaze(-1, 0);
+  document.getElementById('btn-maze-right').onclick = () => moveMaze(1, 0);
+
+  document.getElementById('btn-back-to-map').onclick = () => renderScreen('world_map');
+}
+
+// Simple city maze (10x10 grid)
+const cityMazeData = [
+  ['🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢'],
+  ['🏢', '🛣️', '🛣️', '🛣️', '🏢', '🛣️', '🛣️', '🛣️', '🛣️', '🏢'],
+  ['🏢', '🛣️', '🏢', '🛣️', '🏢', '🛣️', '🏢', '🏢', '🛣️', '🏢'],
+  ['🏢', '🛣️', '🏢', '🛣️', '🛣️', '🛣️', '🛣️', '🏢', '🛣️', '🏢'],
+  ['🏢', '🛣️', '🏢', '🏢', '🏢', '🏢', '🛣️', '🏢', '🛣️', '🏢'],
+  ['🏢', '🛣️', '🛣️', '🛣️', '🛣️', '🛣️', '🛣️', '🏢', '🛣️', '🏢'],
+  ['🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🛣️', '🏢', '🛣️', '🏢'],
+  ['🏢', '🛣️', '🛣️', '🛣️', '🛣️', '🛣️', '🛣️', '🛣️', '🛣️', '🏢'],
+  ['🏢', '🛣️', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🌟', '🏢'],
+  ['🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢', '🏢']
+];
+
+let mazePlayerPos = { x: 1, y: 1 }; // Start position in maze
+
+function drawCityMaze() {
+  const grid = document.getElementById('city-maze-grid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(10, 40px)';
+  grid.style.gap = '2px';
+  grid.style.margin = '20px auto';
+  grid.style.width = 'fit-content';
+
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      const cell = document.createElement('div');
+      cell.style.width = '40px';
+      cell.style.height = '40px';
+      cell.style.display = 'flex';
+      cell.style.alignItems = 'center';
+      cell.style.justifyContent = 'center';
+      cell.style.fontSize = '24px';
+      cell.style.border = '1px solid #ccc';
+      cell.style.position = 'relative';
+
+      if (x === mazePlayerPos.x && y === mazePlayerPos.y) {
+        cell.textContent = '🚶';
+        cell.style.backgroundColor = '#ffeb3b';
+      } else {
+        cell.textContent = cityMazeData[y][x];
+        if (cityMazeData[y][x] === '🛣️') {
+          cell.style.backgroundColor = '#e0e0e0';
+        } else if (cityMazeData[y][x] === '🏢') {
+          cell.style.backgroundColor = '#90a4ae';
+        } else if (cityMazeData[y][x] === '🌟') {
+          cell.style.backgroundColor = '#ffd54f';
+        }
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function moveMaze(dx, dy) {
+  const newX = mazePlayerPos.x + dx;
+  const newY = mazePlayerPos.y + dy;
+
+  // Check bounds
+  if (newX < 0 || newX >= 10 || newY < 0 || newY >= 10) return;
+
+  // Check if it's a wall (building)
+  if (cityMazeData[newY][newX] === '🏢') return;
+
+  // Move player
+  mazePlayerPos = { x: newX, y: newY };
+  drawCityMaze();
+
+  // Check if reached the goal
+  if (cityMazeData[newY][newX] === '🌟') {
+    showDialog('🌟 Você encontrou um ponto especial da cidade! Mais aventuras virão...', () => {
+      renderScreen('world_map');
+    });
+  }
 }
 
 // ========== SISTEMA DE TELAS ========== //
@@ -687,12 +989,21 @@ function sendToGoogleSheets(data) {
 // Controles pelo teclado
 window.addEventListener('keydown', (e) => {
   const currentScreenIsMap = document.querySelector('.map-grid');
-  if (!currentScreenIsMap) return;
+  const currentScreenIsMaze = document.getElementById('city-maze-grid');
 
-  if (e.key === 'ArrowUp') step(0, -1);
-  if (e.key === 'ArrowDown') step(0, 1);
-  if (e.key === 'ArrowLeft') step(-1, 0);
-  if (e.key === 'ArrowRight') step(1, 0);
+  if (currentScreenIsMap && !currentScreenIsMaze) {
+    // Main map controls
+    if (e.key === 'ArrowUp') step(0, -1);
+    if (e.key === 'ArrowDown') step(0, 1);
+    if (e.key === 'ArrowLeft') step(-1, 0);
+    if (e.key === 'ArrowRight') step(1, 0);
+  } else if (currentScreenIsMaze) {
+    // Maze controls
+    if (e.key === 'ArrowUp') moveMaze(0, -1);
+    if (e.key === 'ArrowDown') moveMaze(0, 1);
+    if (e.key === 'ArrowLeft') moveMaze(-1, 0);
+    if (e.key === 'ArrowRight') moveMaze(1, 0);
+  }
 });
 
 // INICIALIZAÇÃO
