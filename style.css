@@ -35,6 +35,16 @@ header#hud {
 header .logo {
   color: var(--primary-color);
   text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-image {
+  width: 32px;
+  height: 32px;
+  image-rendering: auto;
+  /* Use smooth rendering for the logo */
 }
 
 header .points span {
